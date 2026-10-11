@@ -1,0 +1,952 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conducting Sphere in a Uniform Electric Field | Physics Simulation</title>
+
+  <!-- KaTeX for exact math formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --bg-card: #131b2e;
+      --bg-glass: rgba(15, 23, 42, 0.88);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --e-net: #10b981;
+      --e-ext: #38bdf8;
+      --e-ind: #fb923c;
+      --v-gold: #fbbf24;
+      --primary: #3b82f6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      font-size: 13px;
+    }
+
+    /* HEADER */
+    header {
+      height: 52px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+    .header-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    .badge {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--e-ext);
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+    .header-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 12px;
+    }
+    .header-btn.sec {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      margin-right: 6px;
+    }
+
+    /* MAIN LAYOUT */
+    main { flex: 1; display: flex; position: relative; overflow: hidden; }
+    #canvas-wrap { flex: 1; position: relative; cursor: crosshair; }
+    canvas#sim-canvas { width: 100%; height: 100%; display: block; }
+
+    /* FLOATING TOOLBAR */
+    #toolbar {
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      display: flex;
+      gap: 6px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(10px);
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      z-index: 10;
+    }
+    .pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .pill:hover, .pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* PROBE SENSOR HUD */
+    #probe-card {
+      position: absolute;
+      top: 54px;
+      left: 14px;
+      width: 310px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      z-index: 10;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .probe-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .probe-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 12px;
+    }
+    .probe-row.net {
+      border-top: 1px dashed var(--border);
+      padding-top: 5px;
+      margin-top: 5px;
+      font-weight: 600;
+      color: var(--e-net);
+    }
+    .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+    .swatch.ext { background: var(--e-ext); }
+    .swatch.ind { background: var(--e-ind); }
+    .swatch.net { background: var(--e-net); }
+    .val-code { font-family: monospace; }
+    .probe-badge {
+      margin-top: 8px;
+      padding: 6px;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 500;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    /* BOTTOM 1D GRAPH DRAWER */
+    #graph-drawer {
+      position: absolute;
+      bottom: 0;
+      left: 14px;
+      right: 14px;
+      height: 160px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      transition: height 0.25s ease;
+    }
+    #graph-drawer.minimized { height: 32px; }
+    .drawer-top {
+      height: 32px;
+      padding: 0 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .drawer-body { flex: 1; position: relative; }
+    canvas#graph-canvas { width: 100%; height: 100%; display: block; }
+
+    /* SIDEBAR CONTROLS */
+    aside {
+      width: 360px;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      border-bottom: 2px solid transparent;
+    }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--bg-card); }
+    .tab-content { flex: 1; overflow-y: auto; padding: 14px; display: none; }
+    .tab-content.active { display: block; }
+
+    .control-block { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .control-block:last-child { border: none; }
+    .block-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--e-ext); }
+    .slider-row { margin-bottom: 10px; }
+    .slider-label { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11.5px; color: var(--text-muted); }
+    .slider-val { font-family: monospace; color: var(--text); }
+    input[type="range"] { width: 100%; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; accent-color: var(--primary); }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .checkbox-label:hover { color: var(--text); }
+
+    /* MATH BOXES */
+    .math-box {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      overflow-x: auto;
+    }
+
+    /* MODAL SLIDES */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      width: 90%; max-width: 620px; max-height: 85vh; display: flex; flex-direction: column;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.8);
+    }
+    .modal-top { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-content { padding: 16px; overflow-y: auto; flex: 1; font-size: 13px; line-height: 1.6; }
+    .modal-bot { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; }
+    .close-btn { background: transparent; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-title">
+      <span class="badge">ELECTRODYNAMICS LAB</span>
+      <span>Conducting Sphere in a Uniform Electric Field</span>
+    </div>
+    <div>
+      <button class="header-btn sec" id="btn-slides">🎓 Lecture Slides</button>
+      <button class="header-btn sec" id="btn-reset">↺ Reset</button>
+      <button class="header-btn" id="btn-help">📖 Help</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="canvas-wrap">
+      <!-- Toolbar presets -->
+      <div id="toolbar">
+        <button class="pill active" data-preset="neutral">Neutral ($V_0=0$)</button>
+        <button class="pill" data-preset="charged">Charged ($Q>0$)</button>
+        <button class="pill" data-preset="strong">Strong Field</button>
+        <button class="pill" data-preset="shielding">Shielding Demo</button>
+      </div>
+
+      <canvas id="sim-canvas"></canvas>
+
+      <!-- Vector Probe Card -->
+      <div id="probe-card">
+        <div class="probe-header">
+          <span>🎯 Vector Superposition Probe</span>
+          <span id="probe-r-theta" class="val-code">r = 1.80m, θ = 0°</span>
+        </div>
+        <div class="probe-row">
+          <span><span class="swatch ext"></span>External field $\mathbf{E}_{\text{ext}}$:</span>
+          <span id="txt-e-ext" class="val-code">(100.0, 0.0) V/m</span>
+        </div>
+        <div class="probe-row">
+          <span><span class="swatch ind"></span>Induced field $\mathbf{E}_{\text{ind}}$:</span>
+          <span id="txt-e-ind" class="val-code">(-35.2, 12.1) V/m</span>
+        </div>
+        <div class="probe-row net">
+          <span><span class="swatch net"></span>Total field $\mathbf{E}_{\text{net}}$:</span>
+          <span id="txt-e-net" class="val-code">(64.8, 12.1) V/m</span>
+        </div>
+        <div class="probe-row">
+          <span>Magnitude $|\mathbf{E}_{\text{net}}|$:</span>
+          <span id="txt-e-mag" class="val-code">65.9 V/m</span>
+        </div>
+        <div class="probe-row">
+          <span>Potential $V(\mathbf{r})$:</span>
+          <span id="txt-v-val" class="val-code">-42.3 V</span>
+        </div>
+        <div class="probe-badge" id="probe-status">
+          ✓ Superposition: $\mathbf{E}_{\text{net}} = \mathbf{E}_{\text{ext}} + \mathbf{E}_{\text{ind}}$
+        </div>
+      </div>
+
+      <!-- 1D Graph Drawer -->
+      <div id="graph-drawer">
+        <div class="drawer-top">
+          <span>1D Cross-Section: $V(x)$ [Gold] & $E_x(x)$ [Green] along Axis ($y=0$)</span>
+          <button id="btn-toggle-graph" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">Minimize</button>
+        </div>
+        <div class="drawer-body">
+          <canvas id="graph-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside>
+      <div class="tabs">
+        <button class="tab active" data-tab="tab-params">Controls</button>
+        <button class="tab" data-tab="tab-layers">Layers</button>
+        <button class="tab" data-tab="tab-math">Equations</button>
+      </div>
+
+      <!-- Tab 1: Controls -->
+      <div class="tab-content active" id="tab-params">
+        <div class="control-block">
+          <div class="block-title">External Electric Field $\mathbf{E}_0$</div>
+          <div class="slider-row">
+            <div class="slider-label"><span>Field Strength ($E_0$)</span><span id="val-e0" class="slider-val">100 V/m</span></div>
+            <input type="range" id="sl-e0" min="-200" max="200" step="5" value="100">
+          </div>
+          <div class="slider-row">
+            <div class="slider-label"><span>Field Angle ($\alpha$)</span><span id="val-angle" class="slider-val">0°</span></div>
+            <input type="range" id="sl-angle" min="0" max="360" step="5" value="0">
+          </div>
+        </div>
+
+        <div class="control-block">
+          <div class="block-title">Conducting Sphere</div>
+          <div class="slider-row">
+            <div class="slider-label"><span>Sphere Radius ($R$)</span><span id="val-r" class="slider-val">1.20 m</span></div>
+            <input type="range" id="sl-radius" min="0.5" max="2.2" step="0.05" value="1.20">
+          </div>
+          <div class="slider-row">
+            <div class="slider-label"><span>Net Charge ($Q$)</span><span id="val-q" class="slider-val">0.0 nC</span></div>
+            <input type="range" id="sl-charge" min="-5" max="5" step="0.2" value="0">
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="chk-ground" checked> Grounded Conductor ($V_0 = 0$)
+          </label>
+        </div>
+
+        <div class="control-block">
+          <div class="block-title">Interactive Actions</div>
+          <div style="display:flex; gap:6px;">
+            <button class="pill" id="btn-pulse" style="flex:1;">⚡ Emit Pulse</button>
+            <button class="pill" id="btn-drop" style="flex:1;">✨ Drop +q</button>
+            <button class="pill" id="btn-clear" style="flex:1;">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Layers -->
+      <div class="tab-content" id="tab-layers">
+        <div class="control-block">
+          <div class="block-title">Visual Overlays</div>
+          <label class="checkbox-label"><input type="checkbox" id="chk-lines" checked> Field Streamlines</label>
+          <label class="checkbox-label"><input type="checkbox" id="chk-equi" checked> Equipotential Contours</label>
+          <label class="checkbox-label"><input type="checkbox" id="chk-probe" checked> Vector Addition Probe</label>
+          <label class="checkbox-label"><input type="checkbox" id="chk-halo" checked> Surface Charge Halo ($\sigma(\theta)$)</label>
+          <label class="checkbox-label"><input type="checkbox" id="chk-quiver"> Vector Field Grid</label>
+          <label class="checkbox-label"><input type="checkbox" id="chk-grid" checked> Metric Grid Lines</label>
+        </div>
+      </div>
+
+      <!-- Tab 3: Equations -->
+      <div class="tab-content" id="tab-math">
+        <div class="control-block">
+          <div class="block-title">1. Electrostatic Potential $V(r, \theta)$</div>
+          <div class="math-box" id="eq-v"></div>
+          <p style="font-size:11.5px; color:var(--text-muted); line-height:1.4;">
+            Exact solution to $\nabla^2 V = 0$ with $V(R)=0$ and $V(r\to\infty) = -E_0 r\cos\theta$.
+          </p>
+        </div>
+
+        <div class="control-block">
+          <div class="block-title">2. Electric Field $\mathbf{E} = -\nabla V$</div>
+          <div class="math-box" id="eq-e"></div>
+          <p style="font-size:11.5px; color:var(--text-muted); line-height:1.4;">
+            Inside ($r < R$): $\mathbf{E}=0$ (perfect shielding).<br>
+            Outside ($r \ge R$): Uniform field + induced dipole $\mathbf{p}_{\text{ind}} = 4\pi\varepsilon_0 R^3 \mathbf{E}_0$.
+          </p>
+        </div>
+
+        <div class="control-block">
+          <div class="block-title">3. Surface Charge Density $\sigma(\theta)$</div>
+          <div class="math-box" id="eq-sigma"></div>
+          <p style="font-size:11.5px; color:var(--text-muted); line-height:1.4;">
+            Field lines terminate normally on the surface: $\Delta E_\perp = \sigma / \varepsilon_0$.
+          </p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- PRESENTATION MODAL -->
+  <div id="slides-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-top">
+        <span style="font-weight:700; color:var(--e-ext);" id="slide-num">SLIDE 1 OF 5</span>
+        <button class="close-btn" id="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-content" id="slide-body"></div>
+      <div class="modal-bot">
+        <button class="header-btn sec" id="btn-slide-prev">◀ Previous</button>
+        <button class="header-btn" id="btn-slide-next">Next ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       1. ELECTRODYNAMICS ANALYTICAL PHYSICS ENGINE
+       ========================================================================== */
+    class Electrodynamics {
+      constructor() {
+        this.eps0 = 8.854e-12;
+        this.ke = 8.988e9;
+        this.E0 = 100.0;
+        this.angle = 0.0;
+        this.R = 1.20;
+        this.Q = 0.0;
+        this.grounded = true;
+        this.particles = [];
+      }
+
+      get u() {
+        const rad = (this.angle * Math.PI) / 180.0;
+        return { x: Math.cos(rad), y: Math.sin(rad) };
+      }
+
+      getPotential(x, y) {
+        const r = Math.hypot(x, y);
+        const V0 = this.grounded ? 0 : (this.ke * this.Q * 1e-9) / this.R;
+        if (r <= this.R) return V0;
+
+        const u = this.u;
+        const rDotU = x * u.x + y * u.y;
+        const vDipole = -this.E0 * rDotU * (1.0 - (this.R ** 3) / (r ** 3));
+        const vMono = this.grounded ? 0 : (this.ke * this.Q * 1e-9) / r;
+        return vDipole + vMono;
+      }
+
+      getField(x, y) {
+        const r = Math.hypot(x, y);
+        const u = this.u;
+        const ext = { x: this.E0 * u.x, y: this.E0 * u.y };
+
+        if (r < this.R) {
+          return { ext, ind: { x: -ext.x, y: -ext.y }, net: { x: 0, y: 0 }, inside: true, mag: 0 };
+        }
+
+        const R3 = this.R ** 3, r3 = r ** 3, r5 = r ** 5;
+        const rDotE0 = x * ext.x + y * ext.y;
+        const ind = {
+          x: R3 * ((3 * rDotE0 * x) / r5 - ext.x / r3),
+          y: R3 * ((3 * rDotE0 * y) / r5 - ext.y / r3)
+        };
+
+        let mono = { x: 0, y: 0 };
+        if (!this.grounded && Math.abs(this.Q) > 0.01) {
+          const c = (this.ke * this.Q * 1e-9) / r3;
+          mono = { x: c * x, y: c * y };
+        }
+
+        const net = { x: ext.x + ind.x + mono.x, y: ext.y + ind.y + mono.y };
+        return { ext, ind, net, inside: false, mag: Math.hypot(net.x, net.y) };
+      }
+
+      getSigma(thetaRad) {
+        return 3 * this.eps0 * this.E0 * Math.cos(thetaRad);
+      }
+
+      traceLine(x0, y0, forward = true, steps = 300, ds = 0.04) {
+        const pts = [{ x: x0, y: y0 }];
+        let cx = x0, cy = y0;
+        const sign = forward ? 1 : -1;
+
+        for (let i = 0; i < steps; i++) {
+          const r = Math.hypot(cx, cy);
+          if (r <= this.R * 0.999 || Math.abs(cx) > 4.2 || Math.abs(cy) > 4.2) break;
+          const f = this.getField(cx, cy);
+          if (f.inside || f.mag < 1e-3) break;
+
+          cx += sign * (f.net.x / f.mag) * ds;
+          cy += sign * (f.net.y / f.mag) * ds;
+
+          if (Math.hypot(cx, cy) <= this.R) {
+            const sc = this.R / Math.hypot(cx, cy);
+            pts.push({ x: cx * sc, y: cy * sc });
+            break;
+          }
+          pts.push({ x: cx, y: cy });
+        }
+        return pts;
+      }
+    }
+
+    /* ==========================================================================
+       2. CANVAS GRAPHICS RENDERER
+       ========================================================================== */
+    class Renderer {
+      constructor(canvas, physics) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.physics = physics;
+        this.probe = { x: 1.8, y: 0.7 };
+        this.scale = 130;
+        this.time = 0;
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+      }
+
+      resize() {
+        const r = this.canvas.parentElement.getBoundingClientRect();
+        this.dpr = window.devicePixelRatio || 1;
+        this.canvas.width = r.width * this.dpr;
+        this.canvas.height = r.height * this.dpr;
+        this.scale = Math.min(r.width, r.height) / 6.2;
+      }
+
+      w2s(x, y) {
+        const w = this.canvas.width / this.dpr, h = this.canvas.height / this.dpr;
+        return { x: w / 2 + x * this.scale, y: h / 2 - y * this.scale };
+      }
+      s2w(px, py) {
+        const w = this.canvas.width / this.dpr, h = this.canvas.height / this.dpr;
+        return { x: (px - w / 2) / this.scale, y: -(py - h / 2) / this.scale };
+      }
+
+      render() {
+        const ctx = this.ctx, dpr = this.dpr;
+        const w = this.canvas.width / dpr, h = this.canvas.height / dpr;
+        this.time += 0.016;
+
+        ctx.save();
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, w, h);
+
+        if (document.getElementById('chk-grid').checked) this.drawGrid();
+        if (document.getElementById('chk-equi').checked) this.drawEquipotentials();
+        if (document.getElementById('chk-lines').checked) this.drawFieldLines();
+        this.drawSphere();
+        if (document.getElementById('chk-probe').checked) this.drawProbe();
+        this.drawParticles();
+
+        ctx.restore();
+      }
+
+      drawGrid() {
+        const ctx = this.ctx;
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.lineWidth = 1;
+        for (let x = -4; x <= 4; x++) {
+          const p1 = this.w2s(x, -3.5), p2 = this.w2s(x, 3.5);
+          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        }
+        for (let y = -4; y <= 4; y++) {
+          const p1 = this.w2s(-4, y), p2 = this.w2s(4, y);
+          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        }
+      }
+
+      drawSphere() {
+        const ctx = this.ctx, R = this.physics.R;
+        const c = this.w2s(0, 0), rPx = R * this.scale;
+
+        // Surface charge halo
+        if (document.getElementById('chk-halo').checked) {
+          for (let i = 0; i < 60; i++) {
+            const a1 = (i / 60) * 2 * Math.PI, a2 = ((i + 1) / 60) * 2 * Math.PI;
+            const mid = (a1 + a2) / 2;
+            const rel = mid - (this.physics.angle * Math.PI) / 180;
+            const sig = Math.cos(rel);
+
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, rPx + Math.abs(sig) * 8, -a2, -a1);
+            ctx.lineWidth = Math.max(2, Math.abs(sig) * 10);
+            ctx.strokeStyle = sig > 0 ? 'rgba(239,68,68,0.7)' : 'rgba(59,130,246,0.7)';
+            ctx.stroke();
+          }
+        }
+
+        // Conductor metallic gradient
+        const grad = ctx.createRadialGradient(c.x - rPx * 0.3, c.y - rPx * 0.3, rPx * 0.1, c.x, c.y, rPx);
+        grad.addColorStop(0, '#475569'); grad.addColorStop(0.7, '#1e293b'); grad.addColorStop(1, '#0f172a');
+        ctx.beginPath(); ctx.arc(c.x, c.y, rPx, 0, 2 * Math.PI);
+        ctx.fillStyle = grad; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = '#94a3b8'; ctx.stroke();
+
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#fff'; ctx.font = '600 12px sans-serif';
+        ctx.fillText('CONDUCTOR', c.x, c.y - 12);
+        ctx.fillStyle = '#10b981'; ctx.font = '500 11px monospace';
+        ctx.fillText('E = 0', c.x, c.y + 6);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText(`V = ${this.physics.grounded ? '0' : 'V₀'} V`, c.x, c.y + 22);
+      }
+
+      drawFieldLines() {
+        const ctx = this.ctx, u = this.physics.u;
+        const perp = { x: -u.y, y: u.x };
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.6;
+
+        for (let i = 0; i <= 20; i++) {
+          const off = (i / 20 - 0.5) * 6.0;
+          const sx = -u.x * 3.5 + perp.x * off;
+          const sy = -u.y * 3.5 + perp.y * off;
+          const pts = this.physics.traceLine(sx, sy, true, 300);
+          if (pts.length < 2) continue;
+
+          ctx.beginPath();
+          const p0 = this.w2s(pts[0].x, pts[0].y);
+          ctx.moveTo(p0.x, p0.y);
+          for (let j = 1; j < pts.length; j++) {
+            const pj = this.w2s(pts[j].x, pts[j].y);
+            ctx.lineTo(pj.x, pj.y);
+          }
+          ctx.stroke();
+        }
+      }
+
+      drawEquipotentials() {
+        const ctx = this.ctx, R = this.physics.R;
+        const levels = [-100, -60, -30, 0, 30, 60, 100];
+        const gridN = 45, dx = 7.0 / gridN, dy = 7.0 / gridN;
+
+        for (const lvl of levels) {
+          ctx.strokeStyle = lvl === 0 ? '#f59e0b' : 'rgba(251, 191, 36, 0.45)';
+          ctx.lineWidth = lvl === 0 ? 2 : 1;
+          if (lvl === 0) ctx.setLineDash([5, 4]); else ctx.setLineDash([]);
+
+          for (let i = 0; i < gridN; i++) {
+            for (let j = 0; j < gridN; j++) {
+              const x = -3.5 + i * dx, y = -3.5 + j * dy;
+              if (Math.hypot(x, y) < R) continue;
+              const v1 = this.physics.getPotential(x, y);
+              const v2 = this.physics.getPotential(x + dx, y);
+              const v3 = this.physics.getPotential(x, y + dy);
+
+              if ((v1 - lvl) * (v2 - lvl) < 0) {
+                const t = (lvl - v1) / (v2 - v1);
+                const pA = this.w2s(x + t * dx, y);
+                const pB = this.w2s(x + t * dx, y + dy * 0.5);
+                ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pB.x, pB.y); ctx.stroke();
+              }
+            }
+          }
+        }
+        ctx.setLineDash([]);
+      }
+
+      drawProbe() {
+        const ctx = this.ctx;
+        const p = this.w2s(this.probe.x, this.probe.y);
+        const f = this.physics.getField(this.probe.x, this.probe.y);
+        const sc = 0.55;
+
+        const vExt = { x: f.ext.x * sc, y: -f.ext.y * sc };
+        const vInd = { x: f.ind.x * sc, y: -f.ind.y * sc };
+        const vNet = { x: f.net.x * sc, y: -f.net.y * sc };
+
+        // Parallelogram completion
+        if (!f.inside && Math.hypot(vExt.x, vExt.y) > 2) {
+          ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.beginPath(); ctx.moveTo(p.x + vExt.x, p.y + vExt.y); ctx.lineTo(p.x + vNet.x, p.y + vNet.y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(p.x + vInd.x, p.y + vInd.y); ctx.lineTo(p.x + vNet.x, p.y + vNet.y); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Vectors
+        this.arrow(p.x, p.y, p.x + vExt.x, p.y + vExt.y, '#38bdf8', 2);
+        this.arrow(p.x, p.y, p.x + vInd.x, p.y + vInd.y, '#fb923c', 2);
+        if (!f.inside) this.arrow(p.x, p.y, p.x + vNet.x, p.y + vNet.y, '#10b981', 3);
+
+        // Center sensor pin
+        ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = '#10b981'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      }
+
+      arrow(fromX, fromY, toX, toY, color, width) {
+        if (Math.hypot(toX - fromX, toY - fromY) < 2) return;
+        const ctx = this.ctx, angle = Math.atan2(toY - fromY, toX - fromX);
+        ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+        ctx.beginPath(); ctx.moveTo(fromX, fromY); ctx.lineTo(toX, toY); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - 7 * Math.cos(angle - Math.PI / 6), toY - 7 * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(toX - 7 * Math.cos(angle + Math.PI / 6), toY - 7 * Math.sin(angle + Math.PI / 6));
+        ctx.closePath(); ctx.fill();
+      }
+
+      drawParticles() {
+        const ctx = this.ctx;
+        for (const p of this.physics.particles) {
+          const pt = this.w2s(p.x, p.y);
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, 4, 0, 2 * Math.PI);
+          ctx.fillStyle = '#ef4444'; ctx.fill();
+        }
+      }
+    }
+
+    /* ==========================================================================
+       3. 1D CROSS-SECTION GRAPH
+       ========================================================================== */
+    class GraphPlot {
+      constructor(canvas, physics) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.physics = physics;
+      }
+      render() {
+        const ctx = this.ctx, w = this.canvas.width = this.canvas.parentElement.clientWidth;
+        const h = this.canvas.height = this.canvas.parentElement.clientHeight;
+        ctx.clearRect(0, 0, w, h);
+
+        const R = this.physics.R;
+        const mapX = (x) => 40 + ((x + 3.5) / 7.0) * (w - 60);
+        const mapY = (v) => h / 2 - (v / 250) * (h / 2 * 0.8);
+
+        // Conductor range shaded
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.fillRect(mapX(-R), 10, mapX(R) - mapX(-R), h - 20);
+
+        // Axis
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(40, h / 2); ctx.lineTo(w - 20, h / 2); ctx.stroke();
+
+        // Potential curve V(x) in Gold
+        ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2; ctx.beginPath();
+        for (let x = -3.5; x <= 3.5; x += 0.05) {
+          const px = mapX(x), py = mapY(this.physics.getPotential(x, 0));
+          if (x === -3.5) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+
+        // Field curve Ex(x) in Green
+        ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.beginPath();
+        for (let x = -3.5; x <= 3.5; x += 0.05) {
+          const f = this.physics.getField(x, 0);
+          const px = mapX(x), py = mapY(f.net.x);
+          if (x === -3.5) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+    }
+
+    /* ==========================================================================
+       4. APPLICATION CONTROLLER
+       ========================================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+      const physics = new Electrodynamics();
+      const simCanvas = document.getElementById('sim-canvas');
+      const graphCanvas = document.getElementById('graph-canvas');
+      const renderer = new Renderer(simCanvas, physics);
+      const graph = new GraphPlot(graphCanvas, physics);
+
+      function updateUI() {
+        const p = renderer.probe;
+        const r = Math.hypot(p.x, p.y);
+        const th = ((Math.atan2(p.y, p.x) * 180) / Math.PI + 360) % 360;
+        const f = physics.getField(p.x, p.y);
+        const v = physics.getPotential(p.x, p.y);
+
+        document.getElementById('probe-r-theta').textContent = `r = ${r.toFixed(2)}m, θ = ${th.toFixed(0)}°`;
+        document.getElementById('txt-e-ext').textContent = `(${f.ext.x.toFixed(1)}, ${f.ext.y.toFixed(1)}) V/m`;
+        document.getElementById('txt-e-ind').textContent = `(${f.ind.x.toFixed(1)}, ${f.ind.y.toFixed(1)}) V/m`;
+        document.getElementById('txt-e-net').textContent = `(${f.net.x.toFixed(1)}, ${f.net.y.toFixed(1)}) V/m`;
+        document.getElementById('txt-e-mag').textContent = `${f.mag.toFixed(1)} V/m`;
+        document.getElementById('txt-v-val').textContent = `${v.toFixed(1)} V`;
+
+        const badge = document.getElementById('probe-status');
+        if (r < physics.R) {
+          badge.innerHTML = `🛡️ <strong>Inside:</strong> $\\mathbf{E}_{\\text{ind}} = -\\mathbf{E}_{\\text{ext}} \\implies \\mathbf{E}_{\\text{net}} = 0$ (Shielded)`;
+        } else {
+          badge.innerHTML = `✓ <strong>Superposition:</strong> $\\mathbf{E}_{\\text{net}} = \\mathbf{E}_{\\text{ext}} + \\mathbf{E}_{\\text{ind}}$`;
+        }
+        if (window.renderMathInElement) renderMathInElement(badge, { delimiters: [{ left: '$', right: '$', display: false }] });
+
+        // Equations Tab
+        if (window.katex) {
+          katex.render(`V(r, \\theta) = -${physics.E0.toFixed(0)}\\left(r - \\frac{${(physics.R**3).toFixed(2)}}{r^2}\\right)\\cos\\theta`, document.getElementById('eq-v'));
+          katex.render(`E_r = ${physics.E0.toFixed(0)}\\left(1 + \\frac{2(${physics.R.toFixed(1)}^3)}{r^3}\\right)\\cos\\theta`, document.getElementById('eq-e'));
+          katex.render(`\\sigma(\\theta) = 3\\varepsilon_0 (${physics.E0.toFixed(0)})\\cos\\theta`, document.getElementById('eq-sigma'));
+        }
+      }
+
+      // Sliders
+      document.getElementById('sl-e0').addEventListener('input', (e) => {
+        physics.E0 = parseFloat(e.target.value);
+        document.getElementById('val-e0').textContent = `${physics.E0} V/m`;
+        updateUI();
+      });
+      document.getElementById('sl-angle').addEventListener('input', (e) => {
+        physics.angle = parseFloat(e.target.value);
+        document.getElementById('val-angle').textContent = `${physics.angle}°`;
+        updateUI();
+      });
+      document.getElementById('sl-radius').addEventListener('input', (e) => {
+        physics.R = parseFloat(e.target.value);
+        document.getElementById('val-r').textContent = `${physics.R.toFixed(2)} m`;
+        updateUI();
+      });
+      document.getElementById('sl-charge').addEventListener('input', (e) => {
+        physics.Q = parseFloat(e.target.value);
+        document.getElementById('val-q').textContent = `${physics.Q.toFixed(1)} nC`;
+        if (Math.abs(physics.Q) > 0.1) {
+          document.getElementById('chk-ground').checked = false;
+          physics.grounded = false;
+        }
+        updateUI();
+      });
+      document.getElementById('chk-ground').addEventListener('change', (e) => {
+        physics.grounded = e.target.checked;
+        if (e.target.checked) { physics.Q = 0; document.getElementById('sl-charge').value = 0; }
+        updateUI();
+      });
+
+      // Canvas Dragging Probe
+      let dragging = false;
+      simCanvas.addEventListener('mousedown', (e) => {
+        const rect = simCanvas.getBoundingClientRect();
+        renderer.probe = renderer.s2w(e.clientX - rect.left, e.clientY - rect.top);
+        dragging = true;
+        updateUI();
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const rect = simCanvas.getBoundingClientRect();
+        renderer.probe = renderer.s2w(e.clientX - rect.left, e.clientY - rect.top);
+        updateUI();
+      });
+      window.addEventListener('mouseup', () => { dragging = false; });
+
+      // Presets
+      document.querySelectorAll('.pill[data-preset]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.pill[data-preset]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const p = btn.dataset.preset;
+          if (p === 'neutral') { physics.E0 = 100; physics.grounded = true; physics.angle = 0; }
+          if (p === 'charged') { physics.E0 = 80; physics.grounded = false; physics.Q = 3.0; }
+          if (p === 'strong') { physics.E0 = 180; physics.grounded = true; }
+          if (p === 'shielding') { physics.E0 = 120; renderer.probe = { x: 0, y: 0 }; }
+          document.getElementById('sl-e0').value = physics.E0;
+          document.getElementById('val-e0').textContent = `${physics.E0} V/m`;
+          updateUI();
+        });
+      });
+
+      // Actions
+      document.getElementById('btn-drop').addEventListener('click', () => {
+        physics.particles.push({ x: -2.5, y: 1.0 });
+      });
+      document.getElementById('btn-clear').addEventListener('click', () => { physics.particles = []; });
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        physics.E0 = 100; physics.angle = 0; physics.R = 1.20; renderer.probe = { x: 1.8, y: 0.7 };
+        updateUI();
+      });
+
+      // Graph Drawer
+      document.getElementById('btn-toggle-graph').addEventListener('click', () => {
+        const d = document.getElementById('graph-drawer');
+        d.classList.toggle('minimized');
+      });
+
+      // Tabs
+      document.querySelectorAll('.tab').forEach(t => {
+        t.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          t.classList.add('active');
+          document.getElementById(t.dataset.tab).classList.add('active');
+        });
+      });
+
+      // Slides
+      const slides = [
+        { title: "1. The Boundary Value Problem", text: "An uncharged conducting sphere of radius $R$ is placed in a uniform field $\\mathbf{E}_0 = E_0\\hat{x}$. Outside ($r > R$), potential satisfies $\\nabla^2 V = 0$ with $V(R)=0$ and $V(r\\to\\infty) = -E_0 r\\cos\\theta$." },
+        { title: "2. Analytical Solution", text: "By Legendre expansion ($l=1$), the exact solution is:<br>$$V(r,\\theta) = -E_0\\left(r - \\frac{R^3}{r^2}\\right)\\cos\\theta$$ This is the applied uniform field plus an induced dipole $\\mathbf{p}_{\\text{ind}} = 4\\pi\\varepsilon_0 R^3 \\mathbf{E}_0$." },
+        { title: "3. Internal Cancellation (E = 0)", text: "Inside the metal, surface charges establish an internal opposing field $\\mathbf{E}_{\\text{ind}} = -E_0\\hat{x}$. Superposition yields:<br>$$\\mathbf{E}_{\\text{net}} = \\mathbf{E}_{\\text{ext}} + \\mathbf{E}_{\\text{ind}} = \\mathbf{0}$$" },
+        { title: "4. Equipotential Orthogonality", text: "Since $\\mathbf{E} = -\\nabla V$, field lines are strictly normal to equipotentials ($90^\\circ$). Because the conductor is an equipotential, all field lines meet the sphere at right angles." },
+        { title: "5. Vector Superposition Proof", text: "Drag the green probe sensor across the canvas to visually verify the vector parallelogram: $\\mathbf{E}_{\\text{net}} = \\mathbf{E}_{\\text{ext}} + \\mathbf{E}_{\\text{ind}}$." }
+      ];
+      let sIdx = 0;
+      function showSlide(idx) {
+        sIdx = idx;
+        document.getElementById('slide-num').textContent = `SLIDE ${idx + 1} OF ${slides.length}`;
+        const b = document.getElementById('slide-body');
+        b.innerHTML = `<h3>${slides[idx].title}</h3><br><p>${slides[idx].text}</p>`;
+        if (window.renderMathInElement) renderMathInElement(b, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }] });
+      }
+      document.getElementById('btn-slides').addEventListener('click', () => {
+        document.getElementById('slides-modal').classList.remove('hidden'); showSlide(0);
+      });
+      document.getElementById('btn-help').addEventListener('click', () => {
+        document.getElementById('slides-modal').classList.remove('hidden'); showSlide(0);
+      });
+      document.getElementById('btn-close-modal').addEventListener('click', () => { document.getElementById('slides-modal').classList.add('hidden'); });
+      document.getElementById('btn-slide-prev').addEventListener('click', () => { if (sIdx > 0) showSlide(sIdx - 1); });
+      document.getElementById('btn-slide-next').addEventListener('click', () => {
+        if (sIdx < slides.length - 1) showSlide(sIdx + 1); else document.getElementById('slides-modal').classList.add('hidden');
+      });
+
+      // Animation Loop
+      function loop() {
+        for (const p of physics.particles) {
+          const f = physics.getField(p.x, p.y);
+          p.x += f.net.x * 0.0003;
+          p.y += f.net.y * 0.0003;
+        }
+        renderer.render();
+        graph.render();
+        requestAnimationFrame(loop);
+      }
+
+      updateUI();
+      loop();
+    });
+  </script>
+</body>
+</html>
+```
